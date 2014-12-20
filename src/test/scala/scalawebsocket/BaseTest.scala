@@ -17,24 +17,23 @@
 package scalawebsocket
 
 import org.eclipse.jetty.server.nio.SelectChannelConnector
-import com.typesafe.scalalogging.log4j.Logging
-import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.{FlatSpec, BeforeAndAfterAll}
+import org.scalatest.{FlatSpecLike, Matchers, BeforeAndAfterAll}
 import org.eclipse.jetty.server.{Request, Server}
 import org.eclipse.jetty.server.handler.HandlerWrapper
 import org.eclipse.jetty.websocket.WebSocketFactory
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import java.net.ServerSocket
+import com.typesafe.scalalogging.StrictLogging
 
-abstract class BaseTest extends Server with FlatSpec with BeforeAndAfterAll with ShouldMatchers with Logging {
+abstract class BaseTest extends Server with FlatSpecLike with BeforeAndAfterAll with Matchers with StrictLogging {
   protected var port1: Int = 0
   private var _connector: SelectChannelConnector = null
 
-  override def beforeAll(configMap: Map[String, Any]) {
+  override def beforeAll() {
     setUpGlobal()
   }
 
-  override def afterAll(configMap: Map[String, Any]) {
+  override def afterAll() {
     tearDownGlobal()
   }
 
