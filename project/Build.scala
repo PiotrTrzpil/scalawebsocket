@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 
 object BuildSettings {
-  val buildSettings = Defaults.defaultSettings ++ Seq(
+  val buildSettings = Defaults.coreDefaultSettings ++ Seq(
     homepage := Some(url("https://github.com/pbuda/scalawebsocket")),
     licenses := Seq("Apache License 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     organization := "eu.piotrbuda",
@@ -39,21 +39,19 @@ object BuildSettings {
 }
 
 object Dependencies {
-  val asynchttpclient = "com.ning" % "async-http-client" % "1.7.13"
+  val asynchttpclient = "com.ning" % "async-http-client" % "1.9.3"
 
   //logging
   val scalalogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
-  val log4japi = "org.apache.logging.log4j" % "log4j-api" % "2.0-beta4"
-  val log4jcore = "org.apache.logging.log4j" % "log4j-core" % "2.0-beta4"
-  val logback = "ch.qos.logback" % "logback-classic" % "1.0.9"
+  val logback = "ch.qos.logback" % "logback-classic" % "1.1.2"
 
-  val logging = Seq(scalalogging, log4japi, log4jcore, logback)
+  val logging = Seq(scalalogging, logback)
 
   //jetty is used to setup test server
-  val jettyServer = "org.eclipse.jetty" % "jetty-server" % "8.1.7.v20120910"
-  val jettyWebsocket = "org.eclipse.jetty" % "jetty-websocket" % "8.1.7.v20120910"
-  val jettyServlet = "org.eclipse.jetty" % "jetty-servlet" % "8.1.7.v20120910"
-  val jettyServlets = "org.eclipse.jetty" % "jetty-servlets" % "8.1.7.v20120910"
+  val jettyServer = "org.eclipse.jetty" % "jetty-server" % "8.1.16.v20140903"
+  val jettyWebsocket = "org.eclipse.jetty" % "jetty-websocket" % "8.1.16.v20140903"
+  val jettyServlet = "org.eclipse.jetty" % "jetty-servlet" % "8.1.16.v20140903"
+  val jettyServlets = "org.eclipse.jetty" % "jetty-servlets" % "8.1.16.v20140903"
 
   val jetty = Seq(jettyServer, jettyWebsocket, jettyServlet, jettyServlets)
 

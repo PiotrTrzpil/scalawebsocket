@@ -2,12 +2,12 @@ package scalawebsocket
 
 import org.eclipse.jetty.server.handler.HandlerWrapper
 import org.eclipse.jetty.websocket.WebSocketFactory
-import org.eclipse.jetty.server.{Handler, Server, Request}
+import org.eclipse.jetty.server.{ Handler, Server, Request}
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-import org.eclipse.jetty.server.nio.SelectChannelConnector
 import org.eclipse.jetty.websocket
 import scala.concurrent.Promise
 import scala.util.Try
+import org.eclipse.jetty.server.nio.SelectChannelConnector
 
 case class Error(ex: Throwable)
 case class Closed(closeCode: Int, message: String)
@@ -15,16 +15,16 @@ case class Message(message: String)
 case class BinaryMessage(data: Array[Byte], offset: Int, length: Int)
 
 
-class WebSocketServer(port: Int) extends Server {
+class WebSocketServer(val port: Int) extends Server {
    private[scalawebsocket] val onConnectionPublisher = new EventPublisher[ConnectionWrapper]
    val onConnection = onConnectionPublisher.source
 
    private var _connector: SelectChannelConnector = _
 
-   def setupAndStart() = setupAndStart(new DefaultWebSocketHandler(this))
+   def setupAndStart() : Unit = setupAndStart(new DefaultWebSocketHandler(this))
 
-   def setupAndStart(handler: Handler) {
-      _connector = new SelectChannelConnector
+   def setupAndStart(handler: Handler) : Unit = {
+      _connector = new SelectChannelConnector()
       _connector.setPort(port)
       addConnector(_connector)
       setHandler(handler)
@@ -46,7 +46,7 @@ class ConnectionWrapper(val connection: websocket.WebSocket.Connection) {
    private val errorPromise = Promise[Error]()
    val error = errorPromise.future
 
-   connection.setMaxTextMessageSize(1000)
+   //connection.setMaxTextMessageSize(1000)
 
    val fail: PartialFunction[Throwable, Unit] = (value:Throwable) => value match {
       case ex =>
@@ -63,9 +63,11 @@ class ConnectionWrapper(val connection: websocket.WebSocket.Connection) {
         .recover(fail)
    }
 
-   def close(closeCode: Int, message: String): Unit = {
+   private[scalawebsocket] def onClose(closeCode: Int, message: String): Unit = {
       closedPromise.success(Closed(closeCode, message))
    }
+
+   def close() = connection.close()
 }
 
 class ServerWebSocket(server: WebSocketServer) extends websocket.WebSocket
@@ -80,7 +82,7 @@ class ServerWebSocket(server: WebSocketServer) extends websocket.WebSocket
    }
 
    def onClose(i: Int, s: String) {
-      wrapper.close(i, s)
+      wrapper.onClose(i, s)
    }
 
    def onMessage(s: String) {

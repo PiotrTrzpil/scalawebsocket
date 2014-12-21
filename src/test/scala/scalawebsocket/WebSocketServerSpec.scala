@@ -29,211 +29,111 @@ import com.typesafe.scalalogging.StrictLogging
 
 class WebSocketServerSpec extends BaseTest with StrictLogging {
 
-  private final class EchoTextWebSocket extends org.eclipse.jetty.websocket.WebSocket with org.eclipse.jetty.websocket.WebSocket.OnTextMessage with org.eclipse.jetty.websocket.WebSocket.OnBinaryMessage {
-    private var connection: org.eclipse.jetty.websocket.WebSocket.Connection = null
 
-    def onOpen(connection: org.eclipse.jetty.websocket.WebSocket.Connection) {
-      this.connection = connection
-      connection.setMaxTextMessageSize(1000)
-    }
+   it should "call all onConnection handlers" in {
 
-    def onClose(i: Int, s: String) {
-      connection.close()
-    }
+      val server = new WebSocketServer(findFreePort)
+      server.setupAndStart()
+      server.onConnection += (connection => {
+         connection.onMessage += (m => {
+            connection.sendMessage(m.message)
+         })
+      })
+      server.onConnection += (connection => {
+         connection.onMessage += (m => {
+            connection.sendMessage(m.message)
+         })
+      })
 
-    def onMessage(s: String) {
-      try {
-        connection.sendMessage(s)
-      } catch {
-        case e: IOException => {
-          try {
-            connection.sendMessage("FAIL")
-          } catch {
-            case e1: IOException => {
-              e1.printStackTrace()
-            }
-          }
-        }
-      }
-    }
+      val latch = new CountDownLatch(2)
+      val socket = WebSocket()
+        .onTextMessage(m => latch.countDown())
+        .open("ws://127.0.0.1:" + server.port)
 
-    def onMessage(data: Array[Byte], offset: Int, length: Int) {
-      try {
-        connection.sendMessage(data, offset, length)
-      } catch {
-        case e: IOException => {
-          try {
-            connection.sendMessage("FAIL")
-          } catch {
-            case e1: IOException => {
-              e1.printStackTrace()
-            }
-          }
-        }
-      }
-    }
-  }
+      socket.sendText("should return 2 times")
 
-  def getWebSocketHandler: WebSocketHandler = {
-    new WebSocketHandler {
-      def doWebSocketConnect(httpServletRequest: HttpServletRequest, s: String): org.eclipse.jetty.websocket.WebSocket = {
-        new EchoTextWebSocket
-      }
-    }
-  }
+      waitForHandlersToExecute(latch)
+   }
 
-  it should "call all onOpen handlers" in {
-    val latch = new CountDownLatch(3)
-    WebSocket()
-      .onOpen(ws => latch.countDown())
-      .onOpen(ws => latch.countDown())
-      .onOpen(ws => latch.countDown())
-      .open(getTargetUrl)
-    waitForHandlersToExecute(latch)
-  }
+   it should "allow multiple connections" in {
 
-  def waitForHandlersToExecute(latch: CountDownLatch) {
-    class CountDownLatchMatcher extends BeMatcher[Boolean] {
-      def apply(left: Boolean): MatchResult = {
-        MatchResult(left, "Not all handlers were executed", "All handlers were executed")
-      }
-    }
-    val completed = new CountDownLatchMatcher
-    latch.await(10, TimeUnit.SECONDS) should be(completed)
-  }
+      val server = new WebSocketServer(findFreePort)
+      server.setupAndStart()
+      server.onConnection += (connection => {
+         connection.onMessage += (m => {
+            connection.sendMessage(m.message)
+         })
+      })
 
-  it should "remove specified onOpen handler" in {
-    def openHandler(ws: WebSocket) {
-      throw new IllegalStateException("This handler should be removed")
-    }
-    val handler = openHandler _
-    WebSocket().onOpen(handler).removeOnOpen(handler).open(getTargetUrl)
-  }
+      val latch = new CountDownLatch(2)
+      val socket = WebSocket()
+        .onTextMessage(m => latch.countDown())
+        .open("ws://127.0.0.1:" + server.port)
 
-  it should "call all onClose handlers" in {
-    val latch = new CountDownLatch(3)
-    WebSocket()
-      .onClose(ws => latch.countDown())
-      .onClose(ws => latch.countDown())
-      .onClose(ws => latch.countDown())
-      .open(getTargetUrl)
-      .close()
-    waitForHandlersToExecute(latch)
-  }
+      val socket2 = WebSocket()
+        .onTextMessage(m => latch.countDown())
+        .open("ws://127.0.0.1:" + server.port)
 
-  it should "remove specified onClose handler" in {
-    def closeHandler(ws: WebSocket) {
-      throw new IllegalStateException("This handler should be removed")
-    }
-    val handler = closeHandler _
-    WebSocket().onClose(handler).removeOnClose(handler).open(getTargetUrl).close()
-  }
+      socket.sendText("should return 2 times")
+      socket2.sendText("should return 2 times")
 
-  it should "call all onTextMessage handlers" in {
-    val latch = new CountDownLatch(3)
-    WebSocket()
-      .onTextMessage(message => latch.countDown())
-      .onTextMessage(message => latch.countDown())
-      .onTextMessage(message => latch.countDown())
-      .open(getTargetUrl)
-      .sendText("message")
-    waitForHandlersToExecute(latch)
-  }
+      waitForHandlersToExecute(latch)
+   }
 
-  it should "remove specified onTextMessage handler" in {
-    def textHandler(text: String) {
-      throw new IllegalStateException("This handler should be removed")
-    }
-    val handler = textHandler _
-    WebSocket().onTextMessage(handler).removeOnTextMessage(handler).open(getTargetUrl).sendText("some message")
-  }
 
-  it should "call all onBinaryMessage handlers" in {
-    val latch = new CountDownLatch(3)
-    WebSocket()
-      .onBinaryMessage(msg => latch.countDown())
-      .onBinaryMessage(msg => latch.countDown())
-      .onBinaryMessage(msg => latch.countDown())
-      .open(getTargetUrl)
-      .send("binary".getBytes)
-    waitForHandlersToExecute(latch)
-  }
+   it should "call onClose when closed by client" in {
 
-  it should "remove specified onBinaryMessage handler" in {
-    def binaryHandler(message: Array[Byte]) {
-      throw new IllegalStateException("This handler should be removed")
-    }
-    val handler = binaryHandler _
-    WebSocket().onBinaryMessage(handler).removeOnBinaryMessage(handler).open(getTargetUrl).send("binary".getBytes)
-  }
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val server = new WebSocketServer(findFreePort)
+      val latch = new CountDownLatch(2)
 
-  it should "send text message" in {
-    val latch = new CountDownLatch(1)
-    var received = ""
-    WebSocket().onTextMessage(
-      message => {
-        received = message
-        latch.countDown()
-      }).open(getTargetUrl).sendText("test message")
-    waitForHandlersToExecute(latch)
-    received should be("test message")
-  }
+      server.onConnection += (connection => {
+         connection.closed.onSuccess {
+            case Closed(code, message) =>
+               latch.countDown()
+         }
+      })
+      server.setupAndStart()
 
-  it should "send binary message" in {
-    val message = Array[Byte](0, 1)
-    val latch = new CountDownLatch(1)
-    var received = Array[Byte]()
-    WebSocket().onBinaryMessage(message => {
-      received = message
-      latch.countDown()
-    }).open(getTargetUrl).send(message)
-    waitForHandlersToExecute(latch)
-    received should be(message)
-  }
+      val socket = WebSocket()
+        .onTextMessage(m => latch.countDown())
+        .open("ws://127.0.0.1:" + server.port)
+      socket.onClose(w => {
+         latch.countDown()
+      })
 
-  it should "shut down correctly" in {
-    val client = new AsyncHttpClient()
-    val ws = new WebSocket(client)
-    ws.shutdown()
-    client should be('closed)
-  }
+      socket.close()
 
-  it should "allow new connection after closing" in {
-    def errorHandler(error: Throwable) {
-      throw new IllegalStateException("Problem reestablishing connection")
-    }
-    val latch = new CountDownLatch(1)
-    WebSocket().onError(errorHandler).open(getTargetUrl).close().open(getTargetUrl)
-      .onTextMessage(msg => latch.countDown()).sendText("echo")
-    waitForHandlersToExecute(latch)
-  }
+      waitForHandlersToExecute(latch)
+   }
 
-  it should "not allow connection after shutdown" in {
-    val ws = WebSocket()
-    ws.shutdown()
-    intercept[IllegalStateException] {
-      ws.open(getTargetUrl)
-    }
-  }
+   it should "call onClose on both sides when closed by the server" in {
 
-  it should "not allow sending text message after close" in {
-    val ws = WebSocket().open(getTargetUrl).close()
-    intercept[IllegalStateException] {
-      ws.sendText("text")
-    }
-  }
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val server = new WebSocketServer(findFreePort)
+      val latch = new CountDownLatch(2)
 
-  it should "not allow sending binary message after close" in {
-    val ws = WebSocket().open(getTargetUrl).close()
-    intercept[IllegalStateException] {
-      ws.send("text".getBytes)
-    }
-  }
+      server.onConnection += (connection => {
 
-  it should "not allow non ws/wss schemes connection" in {
-    intercept[IllegalArgumentException] {
-      WebSocket().open("https://localhost")
-    }
-  }
+         connection.onMessage += (m => {
+            connection.close()
+         })
+         connection.closed.onSuccess {
+            case Closed(code, message) =>
+               latch.countDown()
+         }
+      })
+      server.setupAndStart()
+
+      val socket = WebSocket()
+        .onTextMessage(m => latch.countDown())
+        .open("ws://127.0.0.1:" + server.port)
+
+      socket.sendText("close cause")
+      socket.onClose(w => {
+         latch.countDown()
+      })
+      waitForHandlersToExecute(latch)
+   }
 
 }

@@ -16,8 +16,9 @@
 
 package scalawebsocket
 
-import com.ning.http.client.{websocket, AsyncHttpClient}
-import com.ning.http.client.websocket.{WebSocketTextListener, WebSocketByteListener, WebSocketUpgradeHandler}
+import com.ning.http.client.{ws, AsyncHttpClient}
+import com.ning.http.client.ws.{WebSocketTextListener, WebSocketByteListener, WebSocketUpgradeHandler}
+import com.ning.http.client.ws.{WebSocket => NingWebSocket}
 import com.typesafe.scalalogging.StrictLogging
 
 object WebSocket {
@@ -44,7 +45,7 @@ class WebSocket(client: AsyncHttpClient) extends StrictLogging {
   type OnWebSocketOperationHandler = WebSocket => Unit
   type OnErrorHandler = Throwable => Unit
 
-  private var ws: websocket.WebSocket = _
+  private var ws: NingWebSocket = _
   private var textMessageHandlers = List[OnTextMessageHandler]()
   private var binaryMessageHandlers = List[OnBinaryMessageHandler]()
   private var openHandlers = List[OnWebSocketOperationHandler]()
@@ -85,11 +86,11 @@ class WebSocket(client: AsyncHttpClient) extends StrictLogging {
         binaryMessageHandlers foreach (_(message))
       }
 
-      def onClose(ws: websocket.WebSocket) {
+      def onClose(ws: NingWebSocket) {
         closeHandlers foreach (_(self))
       }
 
-      def onOpen(ws: websocket.WebSocket) {
+      def onOpen(ws: NingWebSocket) {
         // onOpen handlers are called from open() after the WebSocket has been initialized
       }
 
@@ -154,7 +155,7 @@ class WebSocket(client: AsyncHttpClient) extends StrictLogging {
   }
 
   def sendText(message: String): WebSocket = {
-    if (ws.isOpen) ws.sendTextMessage(message)
+    if (ws.isOpen) ws.sendMessage(message)
     else throw new IllegalStateException("WebSocket is closed, use WebSocket.open(String) to reconnect)")
     this
   }
@@ -180,7 +181,7 @@ class WebSocket(client: AsyncHttpClient) extends StrictLogging {
 
 }
 
-/** Trait grouping all supported derivatives of [[com.ning.http.client.websocket.WebSocketListener]]
+/** Trait grouping all supported derivatives of [[com.ning.http.client.ws.WebSocketListener]]
   *
   */
 trait WebSocketListener extends WebSocketByteListener with WebSocketTextListener

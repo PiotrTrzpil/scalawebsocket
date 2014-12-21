@@ -19,68 +19,21 @@
 
 package scalawebsocket
 
-import java.io.IOException
-import javax.servlet.http.HttpServletRequest
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import com.ning.http.client.AsyncHttpClient
 import org.scalatest.matchers.{MatchResult, BeMatcher}
 import com.typesafe.scalalogging.StrictLogging
 
+class WebSocketSpec extends BaseTest with   StrictLogging {
 
-class WebSocketSpec extends BaseTest with StrictLogging {
-
-  private final class EchoTextWebSocket extends org.eclipse.jetty.websocket.WebSocket with org.eclipse.jetty.websocket.WebSocket.OnTextMessage with org.eclipse.jetty.websocket.WebSocket.OnBinaryMessage {
-    private var connection: org.eclipse.jetty.websocket.WebSocket.Connection = null
-
-    def onOpen(connection: org.eclipse.jetty.websocket.WebSocket.Connection) {
-      this.connection = connection
-      connection.setMaxTextMessageSize(1000)
-    }
-
-    def onClose(i: Int, s: String) {
-      connection.close()
-    }
-
-    def onMessage(s: String) {
-      try {
-        connection.sendMessage(s)
-      } catch {
-        case e: IOException => {
-          try {
-            connection.sendMessage("FAIL")
-          } catch {
-            case e1: IOException => {
-              e1.printStackTrace()
-            }
-          }
-        }
-      }
-    }
-
-    def onMessage(data: Array[Byte], offset: Int, length: Int) {
-      try {
-        connection.sendMessage(data, offset, length)
-      } catch {
-        case e: IOException => {
-          try {
-            connection.sendMessage("FAIL")
-          } catch {
-            case e1: IOException => {
-              e1.printStackTrace()
-            }
-          }
-        }
-      }
-    }
-  }
-
-  def getWebSocketHandler: WebSocketHandler = {
-    new WebSocketHandler {
-      def doWebSocketConnect(httpServletRequest: HttpServletRequest, s: String): org.eclipse.jetty.websocket.WebSocket = {
-        new EchoTextWebSocket
-      }
-    }
-  }
+   override def onConnection(connection: ConnectionWrapper) = {
+      connection.onMessage += (m => {
+         connection.sendMessage(m.message)
+      })
+      connection.onBinaryMessage += (m => {
+         connection.sendMessage(m.data, m.offset, m.length)
+      })
+   }
 
   it should "call all onOpen handlers" in {
     val latch = new CountDownLatch(3)
@@ -92,15 +45,6 @@ class WebSocketSpec extends BaseTest with StrictLogging {
     waitForHandlersToExecute(latch)
   }
 
-  def waitForHandlersToExecute(latch: CountDownLatch) {
-    class CountDownLatchMatcher extends BeMatcher[Boolean] {
-      def apply(left: Boolean): MatchResult = {
-        MatchResult(left, "Not all handlers were executed", "All handlers were executed")
-      }
-    }
-    val completed = new CountDownLatchMatcher
-    latch.await(10, TimeUnit.SECONDS) should be(completed)
-  }
 
   it should "remove specified onOpen handler" in {
     def openHandler(ws: WebSocket) {

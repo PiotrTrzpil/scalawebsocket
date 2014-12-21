@@ -16,15 +16,15 @@
 
 package scalawebsocket
 
-import org.eclipse.jetty.server.nio.SelectChannelConnector
 import org.scalatest.{FlatSpecLike, Matchers, BeforeAndAfterAll}
-import org.eclipse.jetty.server.Server
 import java.net.ServerSocket
 import com.typesafe.scalalogging.StrictLogging
+import java.util.concurrent.{TimeUnit, CountDownLatch}
+import org.scalatest.matchers.{MatchResult, BeMatcher}
 
-abstract class BaseTest extends Server with FlatSpecLike with BeforeAndAfterAll with Matchers with StrictLogging {
+abstract class BaseTest extends FlatSpecLike with BeforeAndAfterAll with Matchers with StrictLogging {
   protected var port1: Int = 0
-  private var _connector: SelectChannelConnector = null
+  var server: WebSocketServer = null
 
   override def beforeAll() {
     setUpGlobal()
@@ -36,19 +36,25 @@ abstract class BaseTest extends Server with FlatSpecLike with BeforeAndAfterAll 
 
   def setUpGlobal() {
     port1 = findFreePort
-    _connector = new SelectChannelConnector
-    _connector.setPort(port1)
-    addConnector(_connector)
-    val _wsHandler: WebSocketHandler = getWebSocketHandler
-    setHandler(_wsHandler)
-    start()
+    server = new WebSocketServer(port1)
+    server.onConnection += onConnection
+    server.setupAndStart()
     logger.info("Local HTTP server started successfully")
   }
 
   def tearDownGlobal() {
-    stop()
+     server.stop()
   }
 
+   def waitForHandlersToExecute(latch: CountDownLatch) {
+      class CountDownLatchMatcher extends BeMatcher[Boolean] {
+         def apply(left: Boolean): MatchResult = {
+            MatchResult(left, "Not all handlers were executed", "All handlers were executed")
+         }
+      }
+      val completed = new CountDownLatchMatcher
+      latch.await(10, TimeUnit.SECONDS) should be(completed)
+   }
 
 
   protected def findFreePort: Int = {
@@ -66,6 +72,5 @@ abstract class BaseTest extends Server with FlatSpecLike with BeforeAndAfterAll 
   protected def getTargetUrl: String = {
     "ws://127.0.0.1:" + port1
   }
-
-  def getWebSocketHandler: WebSocketHandler
+   def onConnection(connection: ConnectionWrapper) = {}
 }
