@@ -50,10 +50,10 @@ object Dependencies {
   val logging = Seq(scalalogging, log4japi, log4jcore, logback)
 
   //jetty is used to setup test server
-  val jettyServer = "org.eclipse.jetty" % "jetty-server" % "8.1.7.v20120910" % "test"
-  val jettyWebsocket = "org.eclipse.jetty" % "jetty-websocket" % "8.1.7.v20120910" % "test"
-  val jettyServlet = "org.eclipse.jetty" % "jetty-servlet" % "8.1.7.v20120910" % "test"
-  val jettyServlets = "org.eclipse.jetty" % "jetty-servlets" % "8.1.7.v20120910" % "test"
+  val jettyServer = "org.eclipse.jetty" % "jetty-server" % "8.1.7.v20120910"
+  val jettyWebsocket = "org.eclipse.jetty" % "jetty-websocket" % "8.1.7.v20120910"
+  val jettyServlet = "org.eclipse.jetty" % "jetty-servlet" % "8.1.7.v20120910"
+  val jettyServlets = "org.eclipse.jetty" % "jetty-servlets" % "8.1.7.v20120910"
 
   val jetty = Seq(jettyServer, jettyWebsocket, jettyServlet, jettyServlets)
 

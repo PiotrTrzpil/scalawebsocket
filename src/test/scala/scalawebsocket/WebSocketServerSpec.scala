@@ -27,7 +27,7 @@ import org.scalatest.matchers.{MatchResult, BeMatcher}
 import com.typesafe.scalalogging.StrictLogging
 
 
-class WebSocketSpec extends BaseTest with StrictLogging {
+class WebSocketServerSpec extends BaseTest with StrictLogging {
 
   private final class EchoTextWebSocket extends org.eclipse.jetty.websocket.WebSocket with org.eclipse.jetty.websocket.WebSocket.OnTextMessage with org.eclipse.jetty.websocket.WebSocket.OnBinaryMessage {
     private var connection: org.eclipse.jetty.websocket.WebSocket.Connection = null

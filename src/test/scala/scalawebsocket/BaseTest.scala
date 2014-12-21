@@ -18,10 +18,7 @@ package scalawebsocket
 
 import org.eclipse.jetty.server.nio.SelectChannelConnector
 import org.scalatest.{FlatSpecLike, Matchers, BeforeAndAfterAll}
-import org.eclipse.jetty.server.{Request, Server}
-import org.eclipse.jetty.server.handler.HandlerWrapper
-import org.eclipse.jetty.websocket.WebSocketFactory
-import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+import org.eclipse.jetty.server.Server
 import java.net.ServerSocket
 import com.typesafe.scalalogging.StrictLogging
 
@@ -42,7 +39,7 @@ abstract class BaseTest extends Server with FlatSpecLike with BeforeAndAfterAll 
     _connector = new SelectChannelConnector
     _connector.setPort(port1)
     addConnector(_connector)
-    val _wsHandler: BaseTest#WebSocketHandler = getWebSocketHandler
+    val _wsHandler: WebSocketHandler = getWebSocketHandler
     setHandler(_wsHandler)
     start()
     logger.info("Local HTTP server started successfully")
@@ -52,23 +49,7 @@ abstract class BaseTest extends Server with FlatSpecLike with BeforeAndAfterAll 
     stop()
   }
 
-  abstract class WebSocketHandler extends HandlerWrapper with WebSocketFactory.Acceptor {
 
-    def getWebSocketFactory: WebSocketFactory = {
-      _webSocketFactory
-    }
-
-    override def handle(target: String, baseRequest: Request, request: HttpServletRequest, response: HttpServletResponse) {
-      if (_webSocketFactory.acceptWebSocket(request, response) || response.isCommitted) return
-      super.handle(target, baseRequest, request, response)
-    }
-
-    def checkOrigin(request: HttpServletRequest, origin: String): Boolean = {
-      true
-    }
-
-    private final val _webSocketFactory: WebSocketFactory = new WebSocketFactory(this, 32 * 1024)
-  }
 
   protected def findFreePort: Int = {
     var socket: ServerSocket = null
@@ -86,5 +67,5 @@ abstract class BaseTest extends Server with FlatSpecLike with BeforeAndAfterAll 
     "ws://127.0.0.1:" + port1
   }
 
-  def getWebSocketHandler: BaseTest#WebSocketHandler
+  def getWebSocketHandler: WebSocketHandler
 }
